@@ -1,0 +1,1202 @@
+app/Http/Controllers/Admin/BookingController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Booking;
+use Illuminate\Http\Request;
+
+class BookingController extends Controller
+{
+    public function index(Request $request) {
+
+        $status = $request->query('status'); // optional filter
+
+        $bookings = Booking::query()
+                ->with(['user', 'service']) // avoids N+1 queries
+                ->when($status, fn ($q) => $q->where('status', $status))
+                ->orderByDesc('booking_date')
+                ->orderByDesc('booking_time')
+                ->paginate(15)
+                ->withQueryString();
+
+        return view('admin.bookings.index', compact('bookings', 'status'));
+    }
+
+
+    public function updateStatus(Request $request, Booking $booking) {
+        // Oly allow specific statuses
+        $request->validate([
+            'status' => ['required', 'in:pending,approved, rejected, completed'],
+        ]);
+
+        // Editor can update, but let's restrict delete/complete later if you want
+        $booking->status = $request->input('status');
+        $booking->save();
+
+        return back()->with('status', 'Booking status updated.');
+    }
+}
+
+
+
+
+app/Http/Controllers/Admin/ServiceController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreServiceRequest;
+use App\Http\Requests\UpdateServiceRequest;
+use App\Models\Service;
+use Illuminate\Http\Request;
+
+class ServiceController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $services = Service::latest()->paginate(10);
+        return view('admin.services.index', compact('services'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        return view('admin.services.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreServiceRequest $request)
+    {
+        $data = $request->validated();
+
+        $data['active'] = (bool) ($data['active'] ?? false);
+
+        Service::create($data);
+
+        return redirect()->route('admin.services.index')->with('status', 'Service Created Successfully!');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Service $service)
+    {
+        return view('admin.services.show', compact('service'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Service $service)
+    {
+        return view('admin.services.edit', compact('service'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateServiceRequest $request, Service $service)
+    {
+        $data = $request->validated();
+
+        $data['active'] = (bool) ($data['active'] ?? false);
+
+        $service->update($data);
+
+        return redirect()->route('admin.services.index')->with('status', 'Service udpated!');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Service $service)
+    {
+        $service->delete();
+
+        return redirect()->route('admin.services.index')->with('status', 'Service deleted!');
+    }
+}
+
+
+
+app/Http/Controllers/BookingController.php :
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreBookingRequest;
+use App\Models\Booking;
+use App\Models\Service;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
+
+class BookingController extends Controller
+{
+    public function create() {
+        $services = Service::query()
+            ->where('active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('bookings.create', compact('services'));
+    }
+
+    public function store(StoreBookingRequest $request) {
+        $data = $request->validated();
+
+        try {
+            Booking::create([
+                'user_id' => $request->user()->id,
+                'service_id' => $data['service_id'],
+                'booking_date' => $data['booking_date'],
+                'booking_time' => $data['booking_time'],
+                'status' => 'pending',
+                'notes' => $data['notes'] ?? null,
+            ]);
+        } catch (QueryException $e) {
+            // if unique constraint hits,  show friendly error
+            return back()
+                ->withInput()
+                ->withErrors(['booking_time' => 'This time slot is already booked. Please choose another time.']);
+        }
+
+        return redirect()->route('bookings.create')->with('status', 'Booking submitted! (Pending approval');
+    }
+}
+
+
+
+app/Http/Middleware/RoleMiddleware.php :
+
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Models\User;
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class RoleMiddleware
+{
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
+    public function handle(Request $request, Closure $next, ...$roles): Response
+    {
+
+        $user = $request->user();
+
+
+        // Make sure user is authenticated
+        if (!$user) {
+            abort(403, 'Unauthorized');
+        }
+
+
+        // If user has no role column
+        if (!isset($user->role)) {
+            abort(403, 'Role not defined');
+        }
+
+        // Check if user's role matches any of the allowed roles
+        if (!in_array($user->role, $roles)) {
+            abort(403, 'You do not have permission to access this area.');
+        }
+
+        return $next($request);
+    }
+}
+
+
+
+app/Http/Requests/StoreBookingRequest.php :
+
+<?php
+
+namespace App\Http\Requests;
+
+use App\Models\Booking;
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreBookingRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+
+        //return false;
+
+        return $this->user() !== null; // logged-in only
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'service_id' => ['required', 'exists:services,id'],
+            'booking_date' => ['required', 'date', 'after_or_equal:today'],
+            'booking_time' => ['required', 'date_format:H:i'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+
+    public function withvalidator($validator) {
+        $validator->after(function ($validator) {
+            $serviceId = $this->input('service_id');
+            $date = $this->input('booking_date');
+            $time = $this->input('booking_time');
+
+            if (!$serviceId || !$date || !$time) {
+                return;
+            }
+
+            $exists = Booking::query()
+                ->where('service_id', $serviceId)
+                ->where('booking_date', $date)
+                ->where('booking_time', $time)
+                ->whereIn('status', ['pending', 'approved'])
+                ->exists();
+
+            if ($exists)  {
+                $validator->errors()->add(
+                    'booking_time',
+                    'This time is already booked. Please choose another time.'
+                );
+            }
+        });
+    }
+}
+
+
+
+app/Http/Requests/StoreServiceRequest.php :
+
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreServiceRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        // admin + editor can manage services
+        return in_array($this->user()?->role, ['admin', 'editor'], true);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'price_cents' => ['required', 'integer', 'min:0'],
+            'duration_minutes' => ['required', 'integer', 'min:5', 'max:600'],
+            'active' => ['nullable', 'boolean'],
+        ];
+    }
+}
+
+
+app/Http/Requests/UpdateServiceRequest.php :
+
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateServiceRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return in_array($this->user()?->role, ['admin', 'editor'], true);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'price_cents' => ['required', 'integer', 'min:0'],
+            'duration_minutes' => ['required', 'integer', 'min:5', 'max:600'],
+            'active' => ['nullable', 'boolean'],
+        ];
+    }
+}
+
+
+
+
+app/Models/Booking.php :
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Booking extends Model
+{
+    protected $fillable = [
+        'user_id',
+        'service_id',
+        'booking_date',
+        'booking_time',
+        'status',
+        'notes'
+    ];
+
+    protected $casts = [
+        'booking_date' => 'date',
+        'booking_time' => 'datetime:H:i', // optional, we can keep as string too
+    ];
+
+
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
+
+    public function service() {
+        return $this->belongsTo(Service::class);
+    }
+}
+
+
+
+app/Models/Service.php :
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Service extends Model
+{
+    protected $fillable = ['name', 'price_cents', 'duration_minutes', 'active'];
+
+    protected $casts = ['active' => 'boolean'];
+
+
+    public function bookings() {
+        return $this->hasMany(Booking::class);
+    }
+
+}
+
+
+
+app/Models/User.php :
+
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+class User extends Authenticatable
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+    public function bookings() {
+        return $this->hasMany(Booking::class);
+    }
+}
+
+
+
+
+bootstrap/app.php :
+
+<?php
+
+use App\Http\Middleware\RoleMiddleware;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'role' => RoleMiddleware::class,
+        ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        //
+    })->create();
+
+
+
+
+database/migrations/2026_02_22_234352_create_services_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('services', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->integer('price_cents')->default(0);
+            $table->unsignedInteger('duration_minutes')->default(30);
+            $table->boolean('active')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('services');
+    }
+};
+
+
+
+
+database/migrations/2026_02_23_004559_add_role_to_users_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('role')->default('user')->after('password');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+
+
+database/migrations/2026_02_24_154550_create_bookings_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('bookings', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('service_id')->constrained()->cascadeOnDelete();
+
+            $table->date('booking_date');
+            $table->time('booking_time');
+
+            $table->string('status')->default('pending'); // pending/approved/rejected/completed
+            $table->text('notes')->nullable();
+
+            $table->timestamps();
+
+            $table->index(['booking_date', 'booking_time']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('bookings');
+    }
+};
+
+
+
+
+database/migrations/2026_02_26_023048_add_unique_slot_index_to_bookings_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->unique(['service_id', 'booking_date', 'booking_time'], 'booking_unique_service_slot');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->dropUnique('bookings_unique_service_slot');
+        });
+    }
+};
+
+
+
+
+database/seeders/AdminUserSeeder.php :
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class AdminUserSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('password'),
+                'role' => 'admin'
+            ]
+        );
+    }
+}
+
+
+
+database/seeders/DatabaseSeeder.php :
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    use WithoutModelEvents;
+
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // User::factory(10)->create();
+
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+        ]);
+
+        $this->call([
+            AdminUserSeeder::class,
+            GuestUserSeeder::class,
+            EditorUserSeeder::class,
+        ]);
+    }
+}
+
+
+
+
+database/seeders/EditorUserSeeder.php :
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class EditorUserSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        User::updateOrCreate(
+            ['email' => 'editor@example.com'],
+            [
+                'name' => 'Editor',
+                'password' => Hash::make('password'),
+                'role' => 'editor'
+            ]
+        );
+    }
+}
+
+
+
+
+database/seeders/GuestUserSeeder.php :
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class GuestUserSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        User::updateOrCreate(
+            ['email' => 'guest@example.com'],
+            [
+                'name' => 'Guest',
+                'password' => Hash::make('password'),
+            ]
+            );
+    }
+}
+
+
+
+
+resources/views/admin/bookings/index.blade.php :
+
+{{-- resources/views/admin/bookings/index.blade.php --}}
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-xl">Admin • Bookings</h2>
+        </div>
+    </x-slot>
+
+    <div class="p-6">
+
+        @if(session('status'))
+            <div class="mb-4 text-green-600">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        {{-- Filter --}}
+        <div class="mb-4">
+            <form method="GET" class="flex gap-3 items-center">
+                <label>Status:</label>
+                <select name="status" onchange="this.form.submit()">
+                    <option value="">All</option>
+                    @foreach(['pending','approved','rejected','completed'] as $s)
+                        <option value="{{ $s }}" {{ $status === $s ? 'selected' : '' }}>
+                            {{ ucfirst($s) }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+        </div>
+
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="text-left">Customer</th>
+                    <th class="text-left">Service</th>
+                    <th class="text-left">Date</th>
+                    <th class="text-left">Time</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-left">Change Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach($bookings as $booking)
+                    <tr class="border-t">
+                        <td class="py-2">
+                            {{ $booking->user->name }}
+                            <br>
+                            <small>{{ $booking->user->email }}</small>
+                        </td>
+
+                        <td class="py-2">
+                            {{ $booking->service->name }}
+                        </td>
+
+                        <td class="py-2">
+                            {{ $booking->booking_date->format('Y-m-d') }}
+                        </td>
+
+                        <td class="py-2">
+                            {{ $booking->booking_time }}
+                        </td>
+
+                        <td class="py-2">
+                            {{ ucfirst($booking->status) }}
+                        </td>
+
+                        <td class="py-2">
+                            <form method="POST"
+                                  action="{{ route('admin.bookings.status', $booking) }}">
+                                @csrf
+                                @method('PATCH')
+
+                                <select name="status">
+                                    @foreach(['pending','approved','rejected','completed'] as $s)
+                                        <option value="{{ $s }}"
+                                            {{ $booking->status === $s ? 'selected' : '' }}>
+                                            {{ ucfirst($s) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+
+                                <button type="submit" class="underline ml-2">
+                                    Update
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <div class="mt-4">
+            {{ $bookings->links() }}
+        </div>
+
+    </div>
+</x-app-layout>
+
+
+
+
+resources/views/admin/services/create.blade.php :
+
+{{-- resources/views/admin/services/create.blade.php --}}
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl">Create Service</h2>
+    </x-slot>
+
+    <div class="p-6 max-w-xl">
+        <form method="POST" action="{{ route('admin.services.store') }}">
+            @csrf
+
+            <div class="mb-3">
+                <label>Name</label>
+                <input class="w-full" name="name" value="{{ old('name') }}">
+                @error('name') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <div class="mb-3">
+                <label>Price (in cents)</label>
+                <input class="w-full" type="number" name="price_cents"
+                       value="{{ old('price_cents') }}">
+                @error('price_cents') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <div class="mb-3">
+                <label>Duration (minutes)</label>
+                <input class="w-full" type="number" name="duration_minutes"
+                       value="{{ old('duration_minutes', 30) }}">
+                @error('duration_minutes') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <label class="inline-flex items-center gap-2 mb-4">
+                <input type="checkbox" name="active" value="1"
+                       {{ old('active', true) ? 'checked' : '' }}>
+                Active
+            </label>
+
+            <div class="flex gap-3">
+                <button type="submit" class="underline">Save</button>
+                <a href="{{ route('admin.services.index') }}" class="underline">
+                    Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+</x-app-layout>
+
+
+
+
+resources/views/admin/services/edit.blade.php :
+
+{{-- resources/views/admin/services/edit.blade.php --}}
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl">Edit Service</h2>
+    </x-slot>
+
+    <div class="p-6 max-w-xl">
+        <form method="POST"
+              action="{{ route('admin.services.update', $service) }}">
+            @csrf
+            @method('PUT')
+
+            <div class="mb-3">
+                <label>Name</label>
+                <input class="w-full" name="name"
+                       value="{{ old('name', $service->name) }}">
+                @error('name') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <div class="mb-3">
+                <label>Price (in cents)</label>
+                <input class="w-full" type="number" name="price_cents"
+                       value="{{ old('price_cents', $service->price_cents) }}">
+                @error('price_cents') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <div class="mb-3">
+                <label>Duration (minutes)</label>
+                <input class="w-full" type="number" name="duration_minutes"
+                       value="{{ old('duration_minutes', $service->duration_minutes) }}">
+                @error('duration_minutes') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <label class="inline-flex items-center gap-2 mb-4">
+                <input type="checkbox" name="active" value="1"
+                       {{ old('active', $service->active) ? 'checked' : '' }}>
+                Active
+            </label>
+
+            <div class="flex gap-3">
+                <button type="submit" class="underline">Update</button>
+                <a href="{{ route('admin.services.index') }}" class="underline">
+                    Back
+                </a>
+            </div>
+
+        </form>
+    </div>
+</x-app-layout>
+
+
+
+resources/views/admin/services/index.blade.php :
+
+{{-- resources/views/admin/services/index.blade.php --}}
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-xl">Admin • Services</h2>
+            <a href="{{ route('admin.services.create') }}" class="underline">
+                + New Service
+            </a>
+        </div>
+    </x-slot>
+
+    <div class="p-6">
+
+        @if(session('status'))
+            <div class="mb-4">{{ session('status') }}</div>
+        @endif
+
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="text-left">Name</th>
+                    <th class="text-left">Price (€)</th>
+                    <th class="text-left">Duration (min)</th>
+                    <th class="text-left">Active</th>
+                    <th class="text-left">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach($services as $service)
+                    <tr class="border-t">
+                        <td class="py-2">{{ $service->name }}</td>
+
+                        <td class="py-2">
+                            {{ number_format($service->price_cents / 100, 2) }}
+                        </td>
+
+                        <td class="py-2">
+                            {{ $service->duration_minutes }}
+                        </td>
+
+                        <td class="py-2">
+                            {{ $service->active ? 'Yes' : 'No' }}
+                        </td>
+
+                        <td class="py-2 flex gap-3">
+                            <a class="underline"
+                               href="{{ route('admin.services.edit', $service) }}">
+                                Edit
+                            </a>
+
+                            <form method="POST"
+                                  action="{{ route('admin.services.destroy', $service) }}"
+                                  onsubmit="return confirm('Delete this service?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="underline">
+                                    Delete
+                                </button>
+                            </form>
+
+                            <a class="underline" href="{{ route('admin.services.show', $service) }}">View</a>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <div class="mt-4">
+            {{ $services->links() }}
+        </div>
+
+    </div>
+</x-app-layout>
+
+
+
+
+resources/views/bookings/create.blade.php :
+
+{{-- resources/views/bookings/create.blade.php --}}
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl">Book an Appointment</h2>
+    </x-slot>
+
+    <div class="p-6 max-w-xl">
+
+        @if(session('status'))
+            <div class="mb-4 text-green-600">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('bookings.store') }}">
+            @csrf
+
+            {{-- Service --}}
+            <div class="mb-4">
+                <label class="block mb-1">Service</label>
+                <select name="service_id" class="w-full">
+                    <option value="">-- Select a Service --</option>
+                    @foreach($services as $service)
+                        <option value="{{ $service->id }}"
+                            {{ old('service_id') == $service->id ? 'selected' : '' }}>
+                            {{ $service->name }}
+                            ({{ number_format($service->price_cents / 100, 2) }}€ -
+                            {{ $service->duration_minutes }} min)
+                        </option>
+                    @endforeach
+                </select>
+                @error('service_id') <div>{{ $message }}</div> @enderror
+            </div>
+
+            {{-- Date --}}
+            <div class="mb-4">
+                <label class="block mb-1">Date</label>
+                <input type="date"
+                       name="booking_date"
+                       class="w-full"
+                       value="{{ old('booking_date') }}">
+                @error('booking_date') <div>{{ $message }}</div> @enderror
+            </div>
+
+            {{-- Time --}}
+            <div class="mb-4">
+                <label class="block mb-1">Time</label>
+                <input type="time"
+                       name="booking_time"
+                       class="w-full"
+                       value="{{ old('booking_time') }}">
+                @error('booking_time') <div>{{ $message }}</div> @enderror
+            </div>
+
+            {{-- Notes --}}
+            <div class="mb-4">
+                <label class="block mb-1">Notes (optional)</label>
+                <textarea name="notes"
+                          rows="3"
+                          class="w-full">{{ old('notes') }}</textarea>
+                @error('notes') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <button type="submit" class="underline">
+                Submit Booking
+            </button>
+
+        </form>
+    </div>
+</x-app-layout>
+
+
+
+
+routes/web.php :
+
+<?php
+
+use App\Http\Controllers\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+
+Route::middleware(['auth', 'role:admin,editor'])
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+            Route::resource('services', ServiceController::class);
+
+            Route::get('bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
+            Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.status');
+        });
+
+Route::middleware('auth')->group(function () {
+        Route::get('/book', [BookingController::class, 'create'])->name('bookings.create');
+        Route::post('/book', [BookingController::class, 'store'])->name('bookings.store');
+});
+
+require __DIR__.'/auth.php';
