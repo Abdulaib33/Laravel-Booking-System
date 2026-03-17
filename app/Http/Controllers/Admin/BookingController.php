@@ -27,7 +27,7 @@ class BookingController extends Controller
     public function updateStatus(Request $request, Booking $booking) {
         // Oly allow specific statuses
         $request->validate([
-            'status' => ['required', 'in:pending,approved, rejected, completed'],
+            'status' => ['required', 'in:pending,approved,rejected,completed'],
         ]);
 
         // Editor can update, but let's restrict delete/complete later if you want
