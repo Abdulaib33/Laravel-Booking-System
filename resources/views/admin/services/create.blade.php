@@ -1,77 +1,42 @@
 {{-- resources/views/admin/services/create.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-2xl text-gray-800 dark:text-gray-100">
-            Create Service
-        </h2>
+        <h2 class="font-semibold text-xl">Create Service</h2>
     </x-slot>
 
-    <div class="p-6 max-w-xl mx-auto">
-        <form method="POST"
-              action="{{ route('admin.services.store') }}"
-              class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl p-6 space-y-5 border border-gray-100 dark:border-gray-800">
+    <div class="p-6 max-w-xl">
+        <form method="POST" action="{{ route('admin.services.store') }}">
             @csrf
 
-            {{-- Name --}}
-            <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Name
-                </label>
-                <input name="name"
-                       value="{{ old('name') }}"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('name')
-                    <div class="text-sm text-red-500 mt-1">{{ $message }}</div>
-                @enderror
+            <div class="mb-3">
+                <label>Name</label>
+                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="name" value="{{ old('name') }}">
+                @error('name') <div>{{ $message }}</div> @enderror
             </div>
 
-            {{-- Price --}}
-            <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Price (in cents)
-                </label>
-                <input type="number"
-                       name="price_cents"
-                       value="{{ old('price_cents') }}"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('price_cents')
-                    <div class="text-sm text-red-500 mt-1">{{ $message }}</div>
-                @enderror
+            <div class="mb-3">
+                <label>Price (in cents)</label>
+                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="number" name="price_cents"
+                       value="{{ old('price_cents') }}">
+                @error('price_cents') <div>{{ $message }}</div> @enderror
             </div>
 
-            {{-- Duration --}}
-            <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Duration (minutes)
-                </label>
-                <input type="number"
-                       name="duration_minutes"
-                       value="{{ old('duration_minutes', 30) }}"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('duration_minutes')
-                    <div class="text-sm text-red-500 mt-1">{{ $message }}</div>
-                @enderror
+            <div class="mb-3">
+                <label>Duration (minutes)</label>
+                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="number" name="duration_minutes"
+                       value="{{ old('duration_minutes', 30) }}">
+                @error('duration_minutes') <div>{{ $message }}</div> @enderror
             </div>
 
-            {{-- Active --}}
-            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                <input type="checkbox"
-                       name="active"
-                       value="1"
-                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            <label class="inline-flex items-center gap-2 mb-4 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition shadow">
+                <input type="checkbox" name="active" value="1"
                        {{ old('active', true) ? 'checked' : '' }}>
                 Active
             </label>
 
-            {{-- Actions --}}
-            <div class="flex gap-3 pt-2">
-                <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition shadow">
-                    Save
-                </button>
-
-                <a href="{{ route('admin.services.index') }}"
-                   class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+            <div class="flex gap-3">
+                <button type="submit" class="underline">Save</button>
+                <a href="{{ route('admin.services.index') }}" class="underline">
                     Cancel
                 </a>
             </div>
