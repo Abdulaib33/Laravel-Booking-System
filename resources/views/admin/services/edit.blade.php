@@ -12,21 +12,21 @@
 
             <div class="mb-3">
                 <label>Name</label>
-                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="name"
+                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="name"
                        value="{{ old('name', $service->name) }}">
                 @error('name') <div>{{ $message }}</div> @enderror
             </div>
 
             <div class="mb-3">
                 <label>Price (in cents)</label>
-                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="number" name="price_cents"
+                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="number" name="price_cents"
                        value="{{ old('price_cents', $service->price_cents) }}">
                 @error('price_cents') <div>{{ $message }}</div> @enderror
             </div>
 
             <div class="mb-3">
                 <label>Duration (minutes)</label>
-                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="number" name="duration_minutes"
+                <input class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="number" name="duration_minutes"
                        value="{{ old('duration_minutes', $service->duration_minutes) }}">
                 @error('duration_minutes') <div>{{ $message }}</div> @enderror
             </div>

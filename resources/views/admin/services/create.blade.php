@@ -28,7 +28,7 @@
                 @error('duration_minutes') <div>{{ $message }}</div> @enderror
             </div>
 
-            <label class="inline-flex items-center gap-2 mb-4 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition shadow">
+            <label class="inline-flex items-center gap-2 mb-4 ">
                 <input type="checkbox" name="active" value="1"
                        {{ old('active', true) ? 'checked' : '' }}>
                 Active
