@@ -18,7 +18,7 @@
         <div class="mb-4">
             <form method="GET" class="flex gap-3 items-center">
                 <label>Status:</label>
-                <select name="status" onchange="this.form.submit()" class="rounded-lg border-gray-300 dark:bg-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <select name="status" onchange="this.form.submit()" class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">All</option>
                     @foreach(['pending','approved','rejected','completed'] as $s)
                         <option value="{{ $s }}" {{ $status === $s ? 'selected' : '' }}>
@@ -72,7 +72,7 @@
                                 @csrf
                                 @method('PATCH')
 
-                                <select name="status" class="rounded-lg border-gray-300 dark:bg-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <select name="status" class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     @foreach(['pending','approved','rejected','completed'] as $s)
                                         <option value="{{ $s }}"
                                             {{ $booking->status === $s ? 'selected' : '' }}>
