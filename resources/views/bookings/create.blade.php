@@ -18,7 +18,7 @@
             {{-- Service --}}
             <div class="mb-4">
                 <label class="block mb-1">Service</label>
-                <select name="service_id" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <select name="service_id" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">-- Select a Service --</option>
                     @foreach($services as $service)
                         <option value="{{ $service->id }}"
@@ -37,7 +37,7 @@
                 <label class="block mb-1">Date</label>
                 <input type="date"
                        name="booking_date"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                        value="{{ old('booking_date') }}">
                 @error('booking_date') <div>{{ $message }}</div> @enderror
             </div>
@@ -47,7 +47,7 @@
                 <label class="block mb-1">Time</label>
                 <input type="time"
                        name="booking_time"
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                        value="{{ old('booking_time') }}">
                 @error('booking_time') <div>{{ $message }}</div> @enderror
             </div>
@@ -57,7 +57,7 @@
                 <label class="block mb-1">Notes (optional)</label>
                 <textarea name="notes"
                           rows="3"
-                          class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ old('notes') }}</textarea>
+                          class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ old('notes') }}</textarea>
                 @error('notes') <div>{{ $message }}</div> @enderror
             </div>
 
