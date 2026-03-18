@@ -1,60 +1,70 @@
 {{-- resources/views/bookings/create.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
-        <div class="page-shell py-0">
-            <h2 class="section-title">Book an Appointment</h2>
-            <p class="section-subtitle">Choose a service, date, and time slot.</p>
-        </div>
+        <h2 class="font-semibold text-xl">Book an Appointment</h2>
     </x-slot>
 
-    <div class="page-shell">
-        <div class="max-w-2xl mx-auto card">
-            <div class="card-body">
-                @if(session('status'))
-                    <div class="alert-success mb-6">
-                        {{ session('status') }}
-                    </div>
-                @endif
+    <div class="p-6 max-w-xl">
 
-                <form method="POST" action="{{ route('bookings.store') }}" class="space-y-6">
-                    @csrf
-
-                    <div>
-                        <label class="label">Service</label>
-                        <select name="service_id" class="select">
-                            <option value="">-- Select a Service --</option>
-                            @foreach($services as $service)
-                                <option value="{{ $service->id }}" {{ old('service_id') == $service->id ? 'selected' : '' }}>
-                                    {{ $service->name }} ({{ number_format($service->price_cents / 100, 2) }}€ · {{ $service->duration_minutes }} min)
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('service_id') <div class="error-text">{{ $message }}</div> @enderror
-                    </div>
-
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <div>
-                            <label class="label">Date</label>
-                            <input type="date" name="booking_date" class="input" value="{{ old('booking_date') }}">
-                            @error('booking_date') <div class="error-text">{{ $message }}</div> @enderror
-                        </div>
-
-                        <div>
-                            <label class="label">Time</label>
-                            <input type="time" name="booking_time" class="input" value="{{ old('booking_time') }}">
-                            @error('booking_time') <div class="error-text">{{ $message }}</div> @enderror
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="label">Notes</label>
-                        <textarea name="notes" rows="4" class="textarea">{{ old('notes') }}</textarea>
-                        @error('notes') <div class="error-text">{{ $message }}</div> @enderror
-                    </div>
-
-                    <button type="submit" class="btn-primary w-full">Submit Booking</button>
-                </form>
+        @if(session('status'))
+            <div class="mb-4 text-green-600">
+                {{ session('status') }}
             </div>
-        </div>
+        @endif
+
+        <form method="POST" action="{{ route('bookings.store') }}">
+            @csrf
+
+            {{-- Service --}}
+            <div class="mb-4">
+                <label class="block mb-1">Service</label>
+                <select name="service_id" class="w-full">
+                    <option value="">-- Select a Service --</option>
+                    @foreach($services as $service)
+                        <option value="{{ $service->id }}"
+                            {{ old('service_id') == $service->id ? 'selected' : '' }}>
+                            {{ $service->name }}
+                            ({{ number_format($service->price_cents / 100, 2) }}€ -
+                            {{ $service->duration_minutes }} min)
+                        </option>
+                    @endforeach
+                </select>
+                @error('service_id') <div>{{ $message }}</div> @enderror
+            </div>
+
+            {{-- Date --}}
+            <div class="mb-4">
+                <label class="block mb-1">Date</label>
+                <input type="date"
+                       name="booking_date"
+                       class="w-full"
+                       value="{{ old('booking_date') }}">
+                @error('booking_date') <div>{{ $message }}</div> @enderror
+            </div>
+
+            {{-- Time --}}
+            <div class="mb-4">
+                <label class="block mb-1">Time</label>
+                <input type="time"
+                       name="booking_time"
+                       class="w-full"
+                       value="{{ old('booking_time') }}">
+                @error('booking_time') <div>{{ $message }}</div> @enderror
+            </div>
+
+            {{-- Notes --}}
+            <div class="mb-4">
+                <label class="block mb-1">Notes (optional)</label>
+                <textarea name="notes"
+                          rows="3"
+                          class="w-full">{{ old('notes') }}</textarea>
+                @error('notes') <div>{{ $message }}</div> @enderror
+            </div>
+
+            <button type="submit" class="underline">
+                Submit Booking
+            </button>
+
+        </form>
     </div>
 </x-app-layout>
