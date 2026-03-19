@@ -26,6 +26,8 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             GuestUserSeeder::class,
             EditorUserSeeder::class,
+            ServiceSeeder::class,
+            BookingSeeder::class,
         ]);
     }
 }
