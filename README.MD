@@ -3,7 +3,7 @@
 
 # 2. Laravel Appointment Booking System — polished GitHub README
 
-```md
+
 # Laravel Appointment Booking System
 
 ![Laravel](https://img.shields.io/badge/Laravel-12-red)
