@@ -73,3 +73,48 @@ composer install
 npm install
 cp .env.example .env
 php artisan key:generate
+```
+
+
+
+Business Logic Highlights
+
+Prevents duplicate time slots for the same service
+
+Uses validation plus database constraints for booking protection
+
+Supports booking lifecycle:
+
+pending
+
+approved
+
+rejected
+
+completed
+
+Restricts admin area with role-based middleware
+
+Project Highlights
+
+Practical real-world booking flow
+
+Stronger than basic CRUD because it includes business rules
+
+Uses Eloquent relationships and admin workflows
+
+Shows backend thinking beyond UI only
+
+Roadmap
+
+Add cancellation by user
+
+Add time-slot generation
+
+Add email notifications for booking status changes
+
+Deploy live version on Railway
+
+Author
+
+Built as a portfolio project to demonstrate Laravel business logic, booking workflows, and admin dashboard development.
