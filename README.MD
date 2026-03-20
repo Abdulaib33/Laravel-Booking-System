@@ -17,12 +17,31 @@ A booking management application built with Laravel.
 
 Users can submit appointment requests, while administrators manage services and booking statuses through an admin dashboard.
 
-## Live Demo
+## 🚀 Live Demo
 
-- Demo: `Coming soon`
-- Admin: `Coming soon`
+- 🌐 Demo: [https://laravel-booking-system-production-aaee.up.railway.app/book](https://laravel-booking-system-production-aaee.up.railway.app/book)
+- 🔐 Admin: [https://laravel-booking-system-production-aaee.up.railway.app/admin/bookings](https://laravel-booking-system-production-aaee.up.railway.app/admin/bookings)
 
-## Features
+***
+
+## 🔐 Demo Credentials
+
+### 🛠️ Admin
+- **Email:** admin@example.com  
+- **Password:** password
+
+### ✏️ Editor
+- **Email:** editor@example.com  
+- **Password:** password
+
+### 👀 Guest
+- **Email:** guest@example.com  
+- **Password:** password
+
+
+***
+
+# ✨ Features
 
 - Authentication
 - Appointment booking form
@@ -34,7 +53,21 @@ Users can submit appointment requests, while administrators manage services and 
 - Double-booking prevention
 - Eloquent relationships between users, services, and bookings
 
-## Screenshots
+---
+
+
+## 🧠 Technical Highlights
+- **Laravel MVC architecture**
+- **Eloquent relationships (User ↔ Booking ↔ Service)**
+- **Server-side validation**
+- **Custom business rules (double booking prevention)**
+- **Role-based middleware**
+- **Clean separation between user and admin flows**
+
+
+---
+
+## 🖼️ Screenshots
 
 ### Booking Form
 ![Booking Form](./screenshots/booking-form.png)
@@ -44,6 +77,10 @@ Users can submit appointment requests, while administrators manage services and 
 
 ### Services Management
 ![Services](./screenshots/services.png)
+
+
+---
+
 
 ## Tech Stack
 
@@ -58,11 +95,16 @@ Users can submit appointment requests, while administrators manage services and 
 **Database**
 - MySQL
 
+**Infrastructure**
+- Railway (deployment)
+
 **Tools**
 - Git
 - GitHub
 - Linux
 - Apache
+
+---
 
 ## Installation
 
@@ -73,48 +115,16 @@ composer install
 npm install
 cp .env.example .env
 php artisan key:generate
+
+
+Configure .env, then:
+
+php artisan migrate --seed
+npm run build
+php artisan serve
 ```
 
+***
 
-
-Business Logic Highlights
-
-Prevents duplicate time slots for the same service
-
-Uses validation plus database constraints for booking protection
-
-Supports booking lifecycle:
-
-pending
-
-approved
-
-rejected
-
-completed
-
-Restricts admin area with role-based middleware
-
-Project Highlights
-
-Practical real-world booking flow
-
-Stronger than basic CRUD because it includes business rules
-
-Uses Eloquent relationships and admin workflows
-
-Shows backend thinking beyond UI only
-
-Roadmap
-
-Add cancellation by user
-
-Add time-slot generation
-
-Add email notifications for booking status changes
-
-Deploy live version on Railway
-
-Author
-
+## 👤 Author
 Built as a portfolio project to demonstrate Laravel business logic, booking workflows, and admin dashboard development.
