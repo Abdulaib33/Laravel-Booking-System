@@ -20,12 +20,12 @@
                         {{ __('Book') }}
                     </x-nav-link>
 
-                    <x-nav-link :href="route('admin.services.index')" :active="request()->routeIs('admin.services.index')">
-                        {{ __('Bookings') }}
+                    <x-nav-link :href="route('admin.bookings.index')" :active="request()->routeIs('admin.bookings.index')">
+                        {{ __('Bookings(Admin Only)') }}
                     </x-nav-link>
 
                     <x-nav-link :href="route('admin.services.index')" :active="request()->routeIs('admin.services.index')">
-                        {{ __('Services') }}
+                        {{ __('Services(Admin Only)') }}
                     </x-nav-link>
                 </div>
             </div>
