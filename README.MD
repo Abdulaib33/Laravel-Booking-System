@@ -82,7 +82,7 @@ Users can submit appointment requests, while administrators manage services and 
 ---
 
 
-## Tech Stack
+# 🚀 Tech Stack
 
 **Backend**
 - PHP
@@ -123,6 +123,15 @@ php artisan migrate --seed
 npm run build
 php artisan serve
 ```
+
+***
+
+## 🗺️ Roadmap
+- Email notifications for booking updates
+- User booking history
+- Time slot automation
+- Calendar view for admin
+- API version
 
 ***
 
